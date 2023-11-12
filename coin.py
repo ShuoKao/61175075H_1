@@ -73,7 +73,15 @@ def hand_pos(finger_angle):
         return '5'                
 
 cap = cv2.VideoCapture(0)
-w, h = 540, 310   
+w, h = 800, 600 
+square_size = 200
+center_x, center_y = w // 2, h // 2
+
+x1 = center_x - square_size // 2
+y1 = center_y - square_size // 2
+x2 = center_x + square_size // 2
+y2 = center_y + square_size // 2
+ 
 
 def detect_ellipses(image_path):
 
@@ -129,30 +137,26 @@ with mp_hands.Hands(
                     finger_points.append((x,y))
                 if finger_points:
                     finger_angle = hand_angle(finger_points)          
-                    text = hand_pos(finger_angle)            
-                    if text == '5':
-                        img2 = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)   
-                        results = hands.process(img2)
-                        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    text = hand_pos(finger_angle) 
 
-                        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-
-                        circles = cv2.HoughCircles(
-                            blurred, cv2.HOUGH_GRADIENT, dp=1, minDist=20, param1=50, param2=30, minRadius=0, maxRadius=0
-                        )
-
+                    if text == '5':   
+                        x, y = (w - square_size) // 2, (h - square_size) // 2
+                        x_end, y_end = x + square_size, y + square_size
+                        cv2.rectangle(img, (x,y), (x_end,y_end), (0, 0, 255), 2)
+                        
+                        roi = img[y1:y2, x1:x2]
+                        gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+                        blurred = cv2.GaussianBlur(gray_roi, (3, 3), 0)
+                        circles = cv2.HoughCircles(gray_roi, cv2.HOUGH_GRADIENT, dp=1, minDist=5,param1=20, param2=30, minRadius=10, maxRadius=50)
                         if circles is not None:
                             circles = np.uint16(np.around(circles))
-
                             for circle in circles[0, :]:
-                                center = (circle[0], circle[1])
-                                radius = circle[2]
-
-                                if radius <=20:
-                                    cv2.ellipse(img, center, (radius, radius), 0, 0, 360, (0, 220, 0), 2)
-
-        cv2.imshow("Detected Ellipses", img)
+                                    center = (circle[0], circle[1])
+                                    radius = circle[2]
+                                    if radius <=20:
+                                        cv2.ellipse(roi, center, (radius, radius), 0, 0, 360, (0, 0, 0), -1)
+                                    
+        cv2.imshow("Detected Coin", roi)
         if cv2.waitKey(5) == ord('q'):
             break    
     cap.release()
